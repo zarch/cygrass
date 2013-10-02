@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# python2 setup.py build_ext --inplace --force
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
@@ -18,7 +19,7 @@ setup(
                            ),
                  Extension("buffer", ["buffer.pyx"],
                            include_dirs=[INCLUDE_DIR, np.get_include()],
-                           libraries=['grass_gis'],
+                           libraries=['grass_gis', 'grass_raster'],
                            library_dirs=[LIB_DIR, ],
                            ),
                  Extension("raster", ["raster.pyx"],

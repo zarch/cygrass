@@ -7,6 +7,6 @@ Created on Sun Sep 29 15:21:17 2013
 
 cdef class ArrayWrapper:
     cdef void* data
-    cdef int gtype
-    cdef int size
+    cdef readonly int gtype
+    cdef readonly int size
     cdef void set_data(self, int, int, void*)

@@ -21,9 +21,8 @@ np.import_array()
 # We need to build an array-wrapper class to deallocate our array when
 # the Python object is deleted.
 
-GTYPE2NP = (np.NP_INT,
-            np.NP_FLOAT,
-            np.NP_DOUBLE)
+cdef int *GTYPE2NP = [np.NPY_INT, np.NPY_FLOAT32, np.NPY_FLOAT64]
+
 
 cdef class ArrayWrapper:
 
@@ -45,23 +44,28 @@ cdef class ArrayWrapper:
     def __dealloc__(self):
         free(<void*>self.data)
 
+    def __repr__(self):
+        return "ArrayWrapper(%d, %d)" % (self.size, self.gtype)
 
-#def py_compute(int size):
-#    """ Python binding of the 'compute' function in 'c_code.c' that does
-#        not copy the data allocated in C.
-#    """
-#    cdef float *array
-#    cdef np.ndarray ndarray
-#    # Call the C function
-#    array = compute(size)
-#
-#    array_wrapper = ArrayWrapper()
-#    array_wrapper.set_data(size, <void*> array)
-#    ndarray = np.array(array_wrapper, copy=False)
-#    # Assign our object to the 'base' of the ndarray object
-#    ndarray.base = <PyObject*> array_wrapper
-#    # Increment the reference count, as the above assignement was done in
-#    # C, and Python does not know that there is this additional reference
-#    Py_INCREF(array_wrapper)
-#
-#    return ndarray
+
+cimport crast
+
+def py_compute(int size, int gtype):
+    """ Python binding of the 'compute' function in 'c_code.c' that does
+        not copy the data allocated in C.
+    """
+    cdef void *array
+    cdef np.ndarray ndarray
+    # Call the C function
+    array = crast.Rast_allocate_buf(gtype)
+
+    array_wrapper = ArrayWrapper()
+    array_wrapper.set_data(size, gtype, array)
+    ndarray = np.array(array_wrapper, copy=False)
+    # Assign our object to the 'base' of the ndarray object
+    ndarray.base = <PyObject*> array_wrapper
+    # Increment the reference count, as the above assignement was done in
+    # C, and Python does not know that there is this additional reference
+    Py_INCREF(array_wrapper)
+
+    return ndarray

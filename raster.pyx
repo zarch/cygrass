@@ -27,18 +27,10 @@ proj: {proj}
 """
 
 
-#ctypedef np.int_t DTYPE_CELL
-#ctypedef np.float32_t DTYPE_FCELL
-#ctypedef np.float64_t DTYPE_DCELL
-
 from libc.stdlib cimport malloc, free
 
-GTYPE2MTYPE = ('CELL', 'FCELL', 'DCELL')
-GTYPE2NUMSTR = ('i', 'f', 'd')
-MTYPE2GTYPE = {'CELL': 0, 'FCELL': 1, 'DCELL': 2}
-#GTYPE2DTYPE = (DTYPE_CELL, DTYPE_FCELL, DTYPE_DCELL)
-GTYPE2SIZE = (4L, 4L, 8L)
 
+MTYPE2GTYPE = {'CELL': 0, 'FCELL': 1, 'DCELL': 2}
 
 
 #cpdef int_row_add_x(int[:] row, x, int[:] res) nogil:
@@ -55,7 +47,6 @@ GTYPE2SIZE = (4L, 4L, 8L)
 #    for i in range(row.shape[0]):
 #        row[i] += x
 #    return row
-
 
 
 cdef class Range:
@@ -163,12 +154,13 @@ cdef class RastInfo(CRegion):
 cdef class RasterAbstract:
 
     def __cinit__(self, name, mapset='',
-                  mode='r', mtype='CELL', overwrite=False):
+                  mode='r', mtype='CELL', overwrite=False, copy=True):
         self.name = name
         self.mapset = mapset
         self.mode = mode
         self.mtype = mtype
         self.overwrite = overwrite
+        self.copy = copy
         # init attributes
         self.fd = -1
         self.rows = 0
@@ -262,25 +254,29 @@ cdef class RasterRow(RasterAbstract):
     cdef void cput_row(self, void* buf):
         crast.Rast_put_row(self.fd, buf, self.gtype)
 
-    def get_row(self, int row, np.ndarray buf=None, copy=False):
+    def get_row(self, int row, np.ndarray buf=None):
         cdef np.ndarray ndarray
         if buf is not None:
-            self.buf = buf
+            self.buf = <void*> buf
         self.cget_row(row, self.buf)
-        ndarray = np.array(self.aw, copy=copy)
+        ndarray = np.array(self.aw, copy=self.copy)
         return ndarray
 
     def put_row(self, buf):
         self.cput_row(<void*>buf)
 
-    cpdef open(self, char* mode='', char* mtype='', bint overwrite=None):
-        cdef char* msg
+    cpdef open(self, char* mode='', char* mtype='', bint overwrite=None,
+               bint copy=None):
+        cdef char *msg
+        cdef void *buf
         if mode:
             self.mode = mode
         if mtype:
             self.mtype = mtype
         if overwrite is not None:
             self.overwrite = overwrite
+        if copy is not None:
+            self.copy = copy
 
         if self.exist():
             if self.mode[0] == 'r':
